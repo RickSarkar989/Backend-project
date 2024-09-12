@@ -3,6 +3,7 @@ import { APIError } from "../utils/APIError.utils.js";
 import { User } from "../models/user.models.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.utils.js";
 import { APIResponse } from "../utils/APIResponse.utils.js";
+import jwt from "jsonwebtoken";
 
 const generateAccessAndRefreshToken = async (userId) => {
   console.log("id", userId);
@@ -16,7 +17,7 @@ const generateAccessAndRefreshToken = async (userId) => {
     user.refreshToken = refreshToken;
     await user.save(); // note 86
 
-    return {accessToken, refreshToken};
+    return { accessToken, refreshToken };
   } catch (error) {
     throw new APIError(
       500,
@@ -36,8 +37,7 @@ const registerUser = asyncHandler(async (req, res) => {
   // check for user creation
   // return response
 
-  let { fullName, email, userName, password, avatar, coverImage } =
-    await req.body;
+  let { fullName, email, userName, password } = await req.body;
 
   if (
     [fullName, email, userName, password].some((field) => field?.trim() === "") //note 70 - 74
@@ -138,8 +138,8 @@ const loginUser = asyncHandler(async (req, res) => {
     secure: true,
   }; // for this  code  we can see the cookie from frontend, but we can't modify it, we can only
   // modifie this from server
-  console.log("acc",accessToken)
-  console.log("ref",refreshToken)
+  console.log("acc", accessToken);
+  console.log("ref", refreshToken);
 
   return res
     .status(200)
@@ -159,11 +159,11 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 const logoutUser = asyncHandler(async (req, res) => {
-  User.findByIdAndUpdate(
+  await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
-        refreshToken: undefined, // note 95
+      $unset: {
+        refreshToken: 1, // note 95
       },
     },
     {
@@ -171,17 +171,70 @@ const logoutUser = asyncHandler(async (req, res) => {
     }
   );
 
+  // req.user.save()
+
   const options = {
     httpOnly: true,
     secure: true,
   };
 
   return res
-    .render("logout.view.ejs")
     .status(200)
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
     .json(new APIResponse(200, {}, "User logged Out Successfully"));
 });
 
-export { registerUser, loginUser, logoutUser };
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  const incomingRefreshToken =
+    req.cookies.refreshToken || req.body.refreshToken;
+
+  if (!incomingRefreshToken) {
+    throw new APIError(401, "Unauthorized request");
+  }
+
+  try {
+    const decodedToken = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    if (!incomingRefreshToken) {
+      throw new APIError(404, "Invalid refreshToken");
+    }
+
+    const user = await User.findById(decodedToken?._id);
+
+    if (!user) {
+      throw new APIError(401, "Invalid refreshToken");
+    }
+
+    if (incomingRefreshToken !== user?.refreshToken) {
+      throw new APIError(401, "Refresh token is expired or used");
+    }
+
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+
+    const { newAccessToken, newRefreshToken } =
+      await generateAccessAndRefreshToken(user._id);
+
+    return res
+      .status(200)
+      .cookie("accessToken", newAccessToken, options)
+      .cookie("refreshToken", newRefreshToken, options)
+      .json(
+        new APIResponse(
+          200,
+          { newAccessToken, newRefreshToken },
+          "Access token refreshed Successfuly"
+        )
+      );
+  } catch (error) {
+    throw new APIError(401, error?.message || "Invalid refreshToken");
+  }
+});
+
+export { registerUser, loginUser, logoutUser,refreshAccessToken };
