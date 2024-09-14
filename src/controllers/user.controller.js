@@ -51,6 +51,17 @@ const registerUser = asyncHandler(async (req, res) => {
   if (existedUser)
     throw new APIError(409, "User with email or username already exists");
 
+  if (!email.includes("@gmail.com")) {
+    throw new APIError(400, "The email is invalid");
+  }
+
+  if (password.length < 8 || password.includes(" ")) {
+    throw new APIError(
+      400,
+      "The Password should have atleast 8 digit and spaces are not allowed "
+    );
+  }
+
   // const avatarLocalPath = req.files?.avatar[0]?.path;
   let coverImageLocalPath;
 
@@ -101,8 +112,6 @@ const loginUser = asyncHandler(async (req, res) => {
 
   const { email, userName, password } = req.body;
 
-  console.log(email, userName, password);
-
   // if (!userName && !email) {
   //   throw new APIError(400, "UserName or Email is required");
   // }   both code is right
@@ -118,9 +127,13 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new APIError(404, "User does not exist");
   }
 
+  if (user.refreshToken && req.cookies.refreshToken) {
+    throw new APIError(409, "User alredy logedIn");
+  }
+
   const isPasswordValid = await user.isPasswordCorrect(password);
 
-  if (!isPasswordValid) {
+  if (!isPasswordValid || isPasswordValid.length < 8) {
     throw new APIError(401, "Invalid user credential");
   }
 
@@ -245,8 +258,6 @@ const changeCurrentUserPassword = asyncHandler(async (req, res) => {
 
   const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
 
-  console.log("pass", isPasswordCorrect);
-
   if (!isPasswordCorrect) {
     throw new APIError(400, "Invalid password");
   }
@@ -264,7 +275,7 @@ const changeCurrentUserPassword = asyncHandler(async (req, res) => {
     .json(new APIResponse(200, {}, "Password changed successfully"));
 });
 
-const currentUser = asyncHandler(async (req, res) => {
+const currentUser = asyncHandler(async (_, res) => {
   return res
     .status(200)
     .json(new APIResponse(200, rep.user, "current user get successfully"));
