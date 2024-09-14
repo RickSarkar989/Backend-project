@@ -9,13 +9,12 @@ const generateAccessAndRefreshToken = async (userId) => {
   console.log("id", userId);
   try {
     let user = await User.findById(userId);
-    console.log("user", user);
+
     const accessToken = user.generateAccessToken();
     const refreshToken = user.generateRefreshToken();
-    console.log("accessToken", accessToken);
-    console.log("refersh", refreshToken);
+
     user.refreshToken = refreshToken;
-    await user.save(); // note 86
+    await user.save({ validateBeforeSave: false }); // note 86
 
     return { accessToken, refreshToken };
   } catch (error) {
@@ -100,7 +99,7 @@ const loginUser = asyncHandler(async (req, res) => {
   // send cookie
   // res send
 
-  const { email, userName, password } = await req.body;
+  const { email, userName, password } = req.body;
 
   console.log(email, userName, password);
 
@@ -122,7 +121,7 @@ const loginUser = asyncHandler(async (req, res) => {
   const isPasswordValid = await user.isPasswordCorrect(password);
 
   if (!isPasswordValid) {
-    throw new APIError(401, "Invalid user credentials");
+    throw new APIError(401, "Invalid user credential");
   }
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
@@ -138,8 +137,6 @@ const loginUser = asyncHandler(async (req, res) => {
     secure: true,
   }; // for this  code  we can see the cookie from frontend, but we can't modify it, we can only
   // modifie this from server
-  console.log("acc", accessToken);
-  console.log("ref", refreshToken);
 
   return res
     .status(200)
@@ -199,7 +196,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       process.env.REFRESH_TOKEN_SECRET
     );
 
-    if (!incomingRefreshToken) {
+    if (!decodedToken) {
       throw new APIError(404, "Invalid refreshToken");
     }
 
@@ -237,4 +234,118 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
-export { registerUser, loginUser, logoutUser,refreshAccessToken };
+const changeCurrentUserPassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword, confirmPassword } = req.body;
+
+  const user = await User.findById(req.user?._id);
+
+  if (!user) {
+    throw new APIError(401, "Unauthorized request");
+  }
+
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+
+  console.log("pass", isPasswordCorrect);
+
+  if (!isPasswordCorrect) {
+    throw new APIError(400, "Invalid password");
+  }
+
+  if (confirmPassword !== newPassword) {
+    throw new APIError(400, "Password does not match");
+  }
+
+  user.password = newPassword;
+
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new APIResponse(200, {}, "Password changed successfully"));
+});
+
+const currentUser = asyncHandler(async (req, res) => {
+  return res
+    .status(200)
+    .json(new APIResponse(200, rep.user, "current user get successfully"));
+});
+
+const updateAccoutDetails = asyncHandler(async (req, res) => {
+  const { fullName, email } = req.body;
+
+  if (!fullName || !email) {
+    throw new APIError(400, "All fields are required");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        fullName,
+        email,
+      },
+    },
+    { new: true }
+  ).select("-password");
+
+  return res.status(200).join(new APIResponse(200, user, "Account updated"));
+});
+
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+  //  req.body -
+  //  check
+  const coverImageLocalPath = req.file?.path;
+  if (!coverImageLocalPath) {
+    throw new APIError(400, "Avatar file is missing");
+  }
+
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+  if (!coverImage) {
+    throw new APIError(400, "Error while uploading or coverImage");
+  }
+
+  await findByIdAndUpdate(
+    req.user?._id,
+    {
+      coverImage: coverImage.url,
+    },
+    { new: true }
+  ).select("-password");
+
+  return res.status(200).json(200, {}, "CoverImage updated successfully");
+});
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  const avatarLocalPath = req.file?.path;
+  if (!avatarLocalPath) {
+    throw new APIError(400, "covarimage file is missing");
+  }
+
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+  if (!avatar) {
+    throw new APIError(400, "Error while uploading or avatar");
+  }
+
+  await findByIdAndUpdate(
+    req.user?._id,
+    {
+      avatar: avatar.url,
+    },
+    { new: true }
+  ).select("-password");
+
+  return res.status(200).json(200, {}, "Avatar updated successfully");
+});
+
+export {
+  loginUser,
+  logoutUser,
+  currentUser,
+  registerUser,
+  updateUserAvatar,
+  refreshAccessToken,
+  updateAccoutDetails,
+  updateUserCoverImage,
+  changeCurrentUserPassword,
+};

@@ -52,16 +52,19 @@ const userSchema = new Schema(
 userSchema.pre("save", async function (next) {
   // note 30
   if (!this.isModified()) return next();
-  this.password = await bcrypt.hash(this.password,10);
+  this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
 userSchema.methods.isPasswordCorrect = async function (password) {
-  return await bcrypt.compare(password, this.password);
+  console.log("ispass", password);
+  const comparedPassword = await bcrypt.compare(password, this.password);
+  console.log("compass", comparedPassword);
+  return comparedPassword;
 };
 
 userSchema.methods.generateAccessToken = function () {
- return jwt.sign(
+  return jwt.sign(
     {
       _id: this._id,
       email: this.email,
@@ -76,7 +79,7 @@ userSchema.methods.generateAccessToken = function () {
 };
 
 userSchema.methods.generateRefreshToken = function () {
- return  jwt.sign(
+  return jwt.sign(
     {
       _id: this._id,
     },
