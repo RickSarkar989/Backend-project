@@ -5,6 +5,7 @@ import {
   logoutUser,
   refreshAccessToken,
   registerUser,
+  updateAccoutDetails,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyjwt } from "../middlewares/auth.milldeware.js";
@@ -44,5 +45,10 @@ router.route("/changePassword").post(verifyjwt, changeCurrentUserPassword);
 router.route("/changePassword").get((_, res) => {
   res.render("changePassword.views.ejs");
 });
+ 
+ router.route("/updateAccount").post(verifyjwt,updateAccoutDetails)
+ router.route("/updateAccount").get((_,res)=>{
+  res.render("updateAccount.views.ejs")
+ })
 
 export default router;
