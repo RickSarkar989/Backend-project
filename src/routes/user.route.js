@@ -1,11 +1,16 @@
 import { Router } from "express";
 import {
-  changeCurrentUserPassword,
   loginUser,
   logoutUser,
-  refreshAccessToken,
+  currentUser,
   registerUser,
+  getWatchHistory,
+  updateUserAvatar,
+  refreshAccessToken,
   updateAccoutDetails,
+  updateUserCoverImage,
+  getUserChannelProfile,
+  changeCurrentUserPassword,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyjwt } from "../middlewares/auth.milldeware.js";
@@ -45,10 +50,21 @@ router.route("/changePassword").post(verifyjwt, changeCurrentUserPassword);
 router.route("/changePassword").get((_, res) => {
   res.render("changePassword.views.ejs");
 });
- 
- router.route("/updateAccount").post(verifyjwt,updateAccoutDetails)
- router.route("/updateAccount").get((_,res)=>{
-  res.render("updateAccount.views.ejs")
- })
+
+router.route("/currnet-user").get(verifyjwt, currentUser);
+
+router.route("/updateAccount").patch(verifyjwt, updateAccoutDetails);
+router.route("/updateAccount").get((_, res) => {
+  res.render("updateAccount.views.ejs");
+});
+
+router
+  .route("/avatar")
+  .patch(verifyjwt, upload.single("avatar"), updateUserAvatar);
+router
+  .route("/coverImage")
+  .patch(verifyjwt, upload.single("coverImage"), updateUserCoverImage);
+router.route("/c/:userName").get(verifyjwt, getUserChannelProfile);
+router.route("/history").get(verifyjwt, getWatchHistory);
 
 export default router;
