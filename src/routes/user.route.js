@@ -53,10 +53,12 @@ router.route("/changePassword").get((_, res) => {
 
 router.route("/currnet-user").get(verifyjwt, currentUser);
 
-router.route("/updateAccount").patch(verifyjwt, updateAccoutDetails);
+router.route("/updateAccount").post(verifyjwt, updateAccoutDetails);
 router.route("/updateAccount").get((_, res) => {
   res.render("updateAccount.views.ejs");
 });
+
+
 
 router
   .route("/avatar")

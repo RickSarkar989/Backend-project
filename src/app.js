@@ -6,7 +6,7 @@ import path from "path";
 const app = express();
 
 app.set("view engine", "ejs");
-app.set("views", path.join("./views"));
+// app.set("views", path.join("./views"));
 app.use(cookieParser());
 app.use(
   cors({
@@ -23,6 +23,7 @@ import userRouter from "./routes/user.route.js";
 
 // routes declaration
 app.use("/api/v1/users", userRouter); // http://localhost:port/api/v1/users/register
-app.use("/", userRouter);
+app.use("/", userRouter); 
+
 
 export { app };

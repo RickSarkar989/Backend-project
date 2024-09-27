@@ -354,7 +354,8 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 const getUserChannelProfile = asyncHandler(async (req, res) => {
   const { userName } = req.params;
 
-  if (!userName?.trim()) {
+
+  if (!userName) {
     throw new APIError(400, "UserName is missing");
   }
   const channel = await User.aggregate([
@@ -466,7 +467,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
       },
     },
   ]);
-
+ console.log("user",user)
   return res
     .status(200)
     .json(
