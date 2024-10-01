@@ -19,11 +19,14 @@ app.use(express.urlencoded({ extended: true })); // note 15 to 17
 app.use(express.static("public")); // we can access files those are stored in our backend server
 
 // routes import
-import userRouter from "./routes/user.route.js";
+import userRouter from "./routes/user.routes.js";
+import tweetRouter from "./routes/tweet.routes.js";
 
 // routes declaration
 app.use("/api/v1/users", userRouter); // http://localhost:port/api/v1/users/register
-app.use("/", userRouter); 
+app.use("/", userRouter,tweetRouter); 
+app.use("/api/v1/tweets", tweetRouter)
+
 
 
 export { app };
